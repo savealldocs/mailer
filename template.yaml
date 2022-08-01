@@ -1,0 +1,64 @@
+# This is the SAM template that represents the architecture of your serverless application
+# https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-template-basics.html
+Globals:
+  Function:
+    Runtime: nodejs14.x
+    Timeout: 100
+    Environment:
+      Variables:
+        MAILGUN_API_URL: https://api.mailgun.net/v3/YOUR_DOMAIN_NAME/messages
+        MAILGUN_BEARER_TOKEN: Basic YXBpOllPVVJfQVBJX0tFWQ==
+        MAILGUN_MAIL_FROM: Excited User <YOU@YOUR_DOMAIN_NAME>
+        SENDGRID_API_URL: https://api.sendgrid.com/v3/mail/send
+        SENDGRID_BEARER_TOKEN: Bearer <<YOUR_API_KEY_HERE>>
+        SENDGRID_MAIL_FROM: { email: sales@example.com,name: Example Sales Team,}
+
+# The AWSTemplateFormatVersion identifies the capabilities of the template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/format-version-structure.html
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  siteminder-mailer-api
+
+# Transform section specifies one or more macros that AWS CloudFormation uses to process your template
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/transform-section-structure.html
+Transform:
+- AWS::Serverless-2016-10-31
+
+# Resources declares the AWS resources that you want to include in the stack
+# https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/resources-section-structure.html
+Resources:
+  # Each Lambda function is defined by properties:
+  # https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+
+  # This is a Lambda function config associated with the source code: get-by-id.js
+  sendMailFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/index.emailHandler
+      Runtime: nodejs14.x
+      Architectures:
+        - x86_64
+      MemorySize: 128
+      Timeout: 100
+      Description: Email handler to switch between mailgun and sendgrid if one fails.
+      Environment:
+        Variables:
+          # Make API configurations accessible as environment variable from function code during execution
+          SENDGRID_API_URL: https://api.sendgrid.com/v3/mail/send
+          SENDGRID_AUTH_TOKEN: Bearer <<YOUR_API_KEY>>
+          SENDGRID_MAIL_FROM: no-reply@anydomain.com
+          MAILGUN_API_URL: https://api.mailgun.net/v3/YOUR_DOMAIN_NAME/messages
+          MAILGUN_BEARER_TOKEN: Bearer <<YOUR_API_KEY>>
+          MAILGUN_MAIL_FROM: no-reply@anydomain.com
+            
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /
+            Method: POST
+
+Outputs:
+  WebEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
